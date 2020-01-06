@@ -1,6 +1,6 @@
 # BUSINESS DATAPARTITIONING
 
-
+##This app implements sorter algorithms based on three disk and RAM sources and CPUs.
 ------------
 
 ### Technology
