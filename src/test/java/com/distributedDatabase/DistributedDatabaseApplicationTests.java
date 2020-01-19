@@ -1,10 +1,10 @@
-package com.parallel;
+package com.distributedDatabase;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class DatabaseProcessingApplicationTests {
+class DistributedDatabaseApplicationTests {
 
 	@Test
 	void contextLoads() {
