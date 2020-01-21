@@ -221,7 +221,6 @@ public class ParallerSortService implements Serializable {
 
         response.setAlgorithm(selectedAlgorithm);
         response.setSuccessful(Boolean.TRUE);
-        response.setCode("200");
         response.setResponse(result);
 
         return response;
