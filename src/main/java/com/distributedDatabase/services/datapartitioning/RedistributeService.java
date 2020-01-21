@@ -21,8 +21,8 @@ public class RedistributeService<T> {
         int min = Integer.MAX_VALUE;
 
         for (Cpu<T> cpu : cpus) {
-            int thismax = cpu.getBuffer().parallelStream().mapToInt(i -> (int) i).max().getAsInt();
-            int thismin = cpu.getBuffer().parallelStream().mapToInt(i -> (int) i).min().getAsInt();
+            int thismax = cpu.getBuffer().parallelStream().mapToInt(i -> (Integer) i).max().getAsInt();
+            int thismin = cpu.getBuffer().parallelStream().mapToInt(i -> (Integer) i).min().getAsInt();
 
             max = (thismax > max) ? thismax : max;
             min = (thismin < min) ? thismin : min;
@@ -36,7 +36,7 @@ public class RedistributeService<T> {
                 long mi = min;
                 long mx = min + step;
                 for (int i = 0; i < size; i++) {
-                    if (((int) data) >= mi && ((int) data) < mx) {
+                    if (((Integer) data) >= mi && ((Integer) data) < mx) {
                         cpus.get(i).getTemporary().add(data);
                         cpus.get(i).pluseActivityRedistribute();
                         cpus.get(i).setRedistributemax(mx);
