@@ -57,25 +57,6 @@ public class ParallerSortService implements Serializable {
         return storage;
     }
 
-
-    public String getFullnameSelectedAlgorithm() {
-        switch (selectedAlgorithm) {
-            case "merge_all":
-                return "Parallel Merge-All";
-            case "binary_merge":
-                return "Parallel Binary-Merge";
-            case "redistribution_binary_merge":
-                return "Parallel Redistribution Binary-Merge";
-            case "redistribution_merge_all":
-                return "Parallel Redistribution Merge-All";
-            case "partitioned":
-                return "Parallel Partitioned";
-            default:
-                return "";
-        }
-    }
-
-
     public String createTitle() {
         StringBuilder result = new StringBuilder();
         switch (selectedAlgorithm) {
@@ -125,7 +106,7 @@ public class ParallerSortService implements Serializable {
         }
         if (cpuCount > noRandomGeneration) {
             response.setSuccessful(Boolean.FALSE);
-            response.setErrorDescription("Random numbers are less than Cpus");
+            response.setErrorDescription("Random storageNO are less than Cpus");
             return response;
         }
         if (noRandomGeneration == 0) {
@@ -221,6 +202,8 @@ public class ParallerSortService implements Serializable {
 
         response.setAlgorithm(selectedAlgorithm);
         response.setSuccessful(Boolean.TRUE);
+        response.setStorageNO(getStorage().getBigData());
+        response.setStorageSortNO(getStorage().getSortedData());
         response.setResponse(result);
 
         return response;

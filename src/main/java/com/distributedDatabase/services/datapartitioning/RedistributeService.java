@@ -47,7 +47,7 @@ public class RedistributeService<T> {
                     mi = mx;
                     mx = mx + step;
                 }
-                // Last numbers
+                // Last storageNO
                 if (!added) {
                     cpus.get(size - 1).getTemporary().add(data);
                     cpus.get(size - 1).pluseActivityRedistribute();
