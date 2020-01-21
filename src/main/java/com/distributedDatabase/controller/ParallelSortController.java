@@ -5,6 +5,8 @@ import com.distributedDatabase.data.Request;
 import com.distributedDatabase.data.Response;
 import com.distributedDatabase.data.Storage;
 import com.distributedDatabase.services.sort.*;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -40,7 +42,7 @@ public class ParallelSortController {
     }
 
     @PostMapping
-    public Response parallelBinaryMerge(@RequestBody Request request) throws IOException {
+    public Response parallelBinaryMerge(@RequestBody Request request) throws IOException, JSONException {
         cpuCount = request.getCpuCount();
         noRandomGeneration = request.getRandomNO();
         selectedAlgorithm = request.getAlgoritmNo();
@@ -48,12 +50,12 @@ public class ParallelSortController {
         Response response = new Response();
         if (cpuCount % 2 != 0) {
             response.setSuccessful(Boolean.FALSE);
-            response.setErrorDescription("The number of CPUs in a system is always even");
+            response.setErrorDescription("The number of Cpus in a system is always even");
             return response;
         }
         if (cpuCount > noRandomGeneration) {
             response.setSuccessful(Boolean.FALSE);
-            response.setErrorDescription("Random numbers are less than CPUs");
+            response.setErrorDescription("Random numbers are less than Cpus");
             return response;
         }
         if (noRandomGeneration == 0) {
@@ -65,7 +67,7 @@ public class ParallelSortController {
         if (selectedAlgorithm.contentEquals("binary_merge")) {
             if (!Integer.toBinaryString(cpuCount - 1).replace("1", "").isEmpty()) {
                 response.setSuccessful(Boolean.FALSE);
-                response.setErrorDescription("The number of CPUs is not suitable for your algorithm of choice");
+                response.setErrorDescription("The number of Cpus is not suitable for your algorithm of choice");
                 return response;
             }
         }
@@ -98,6 +100,48 @@ public class ParallelSortController {
                 break;
         }
 
+        StringBuilder result = new StringBuilder();
+        result.append("[");
+        int c = 1;
+        for (Cpu<Integer> cpu : cpus) {
+            result.append("{");
+            result.append("label: '");
+            result.append(cpu.getCpuName());
+            result.append("',");
+
+            result.append(").alpha(0.5).rgbString(),");
+
+            result.append(",");
+
+            result.append("borderWidth : 1,");
+
+            result.append("data : [ ");
+            switch (selectedAlgorithm) {
+                case "merge_all":
+                    result.append(getDataChartMergeAll(cpu));
+                    break;
+                case "binary_merge":
+                    result.append(getDataChartBinaryMerge(cpu));
+                    break;
+                case "redistribution_binary_merge":
+                    result.append(getDataRedistributionBinaryMerge(cpu));
+                    break;
+                case "redistribution_merge_all":
+                    result.append(getDataRedistributionMergeAll(cpu));
+                    break;
+                case "partitioned":
+                    result.append(getDataPartitionedSort(cpu));
+                    break;
+            }
+
+            result.append("] ");
+            result.append("},");
+            c++;
+        }
+
+        response.setSuccessful(Boolean.TRUE);
+        response.setResponse(new JSONObject(result.toString()));
+
         return response;
     }
 
@@ -122,5 +166,149 @@ public class ParallelSortController {
             }
         }
         return cpus;
+    }
+
+    private String getDataChartMergeAll(Cpu<Integer> cpu) {
+        StringBuilder result = new StringBuilder();
+        // [ 'Round Robin', 'Local Sort', 'Final Merge', 'Total Activity']
+        result.append(cpu.getActivityRoundRobin());
+        result.append(",");
+        result.append(cpu.getActivityLocalSort());
+        result.append(",");
+        result.append(cpu.getActivityFinalMerge());
+        result.append(",");
+        result.append(cpu.getNumberOfActivities());
+        return result.toString();
+    }
+
+    private String getDataChartBinaryMerge(Cpu<Integer> cpu) {
+        StringBuilder result = new StringBuilder();
+        // [ 'Round Robin', 'Local Sort', 'Final Merge', ... , 'Total Activity']
+
+        result.append(cpu.getActivityRoundRobin());
+        result.append(",");
+        Map<String, List<Cpu<Integer>>> allStep = parallelBinaryMerge.getCpusHistories();
+        int sm = parallelBinaryMerge.getAllStepsCpus().size() - 1;
+        for (int i = 0; i < sm; i++) {
+            String ps = "pls" + i;
+            String pm = "pm" + i;
+            Cpu<Integer> cpups = allStep.get(ps).parallelStream().filter(c -> c.getCpuName().equals(cpu.getCpuName()))
+                    .findAny().orElse(new Cpu<>());
+            Cpu<Integer> cpupm = allStep.get(pm).parallelStream().filter(c -> c.getCpuName().equals(cpu.getCpuName()))
+                    .findAny().orElse(new Cpu<>());
+            result.append(cpups.getActivityLocalSort());
+            result.append(",");
+            result.append(cpupm.getActivityFinalMerge());
+            result.append(",");
+        }
+        result.append(cpu.getNumberOfActivities());
+
+        return result.toString();
+    }
+
+    private String getDataRedistributionBinaryMerge(Cpu<Integer> cpu) {
+        StringBuilder result = new StringBuilder();
+        // [ 'Round Robin', 'Local Sort', 'Bin Redistribute', 'Local Sort', 'Final
+        // Redistribute', 'Local Sort', 'Total Activity']
+
+        Cpu<Integer> temp = parallelRedistributionBinaryMerge.getCpusHistories().get("prr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityRoundRobin());
+        result.append(",");
+
+        temp = parallelRedistributionBinaryMerge.getCpusHistories().get("pls").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityLocalSort());
+        result.append(",");
+
+        temp = parallelRedistributionBinaryMerge.getCpusHistories().get("pbr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityRedistribute());
+        result.append(",");
+
+        temp = parallelRedistributionBinaryMerge.getCpusHistories().get("pbrs").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityLocalSort());
+        result.append(",");
+
+        temp = parallelRedistributionBinaryMerge.getCpusHistories().get("pr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        temp = parallelRedistributionBinaryMerge.getCpusHistories().get("prs").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        result.append(cpu.getNumberOfActivities());
+        return result.toString();
+    }
+
+    private String getDataRedistributionMergeAll(Cpu<Integer> cpu) {
+        StringBuilder result = new StringBuilder();
+        // [ 'Round Robin', 'Local Sort', 'Bin Redistribute', 'Local Sort', 'Final
+        // Redistribute', 'Local Sort', 'Total Activity']
+
+        Cpu<Integer> temp = parallelRedistributionMergeAll.getCpusHistories().get("prr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityRoundRobin());
+        result.append(",");
+
+        temp = parallelRedistributionMergeAll.getCpusHistories().get("pls").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityLocalSort());
+        result.append(",");
+
+        temp = parallelRedistributionMergeAll.getCpusHistories().get("pr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        temp = parallelRedistributionMergeAll.getCpusHistories().get("prs").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        result.append(cpu.getNumberOfActivities());
+        return result.toString();
+    }
+
+    private String getDataPartitionedSort(Cpu<Integer> cpu) {
+        StringBuilder result = new StringBuilder();
+        // [ 'Round Robin', 'Local Sort', 'Bin Redistribute', 'Local Sort', 'Final
+        // Redistribute', 'Local Sort', 'Total Activity']
+
+        Cpu<Integer> temp = parallelPartitionedSort.getCpusHistories().get("prr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(temp.getActivityRoundRobin());
+        result.append(",");
+
+        temp = parallelPartitionedSort.getCpusHistories().get("pr").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        temp = parallelPartitionedSort.getCpusHistories().get("prs").parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        result.append(cpu.getActivityRedistribute());
+        result.append(",");
+
+        result.append(cpu.getNumberOfActivities());
+        return result.toString();
+    }
+
+    public String getStyleBtnDownloadParallelBinaryMergePS(Cpu<Integer> cpu, int step) {
+        String pls = "pls" + step;
+        Cpu<Integer> cpupls = parallelBinaryMerge.getCpusHistories().get(pls).parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        return cpupls.getBuffer().isEmpty() ? "btn btn-outline-warning" : "btn btn-info";
+    }
+
+    public String getStyleBtnDownloadParallelBinaryMergePM(Cpu<Integer> cpu, int step) {
+        String pm = "pm" + step;
+        Cpu<Integer> cpupls = parallelBinaryMerge.getCpusHistories().get(pm).parallelStream()
+                .filter(c -> c.getCpuName().equals(cpu.getCpuName())).findAny().orElse(new Cpu<>());
+        return cpupls.getBuffer().isEmpty() ? "btn btn-outline-warning" : "btn btn-info";
     }
 }
