@@ -1,9 +1,6 @@
 package com.distributedDatabase.services;
 
-import com.distributedDatabase.data.Cpu;
-import com.distributedDatabase.data.Request;
-import com.distributedDatabase.data.Response;
-import com.distributedDatabase.data.Storage;
+import com.distributedDatabase.data.*;
 import com.distributedDatabase.services.sort.*;
 import org.springframework.stereotype.Component;
 
@@ -79,7 +76,7 @@ public class ParallerSortService implements Serializable {
     }
 
 
-    public String createChartlabels() {
+    public String createTitle() {
         StringBuilder result = new StringBuilder();
         switch (selectedAlgorithm) {
             case "merge_all":
@@ -113,7 +110,6 @@ public class ParallerSortService implements Serializable {
         }
         return result.toString();
     }
-
 
 
     public Response parallelBinaryMerge(Request request) throws IOException {
@@ -176,44 +172,60 @@ public class ParallerSortService implements Serializable {
                 break;
         }
 
-        StringBuilder result = new StringBuilder();
-        result.append("[");
+        List<ProcessResponse> result = new ArrayList<>();
+
         int c = 1;
         for (Cpu<Integer> cpu : cpus) {
-            result.append("{");
-            result.append("process: '");
-            result.append(cpu.getCpuName());
-            result.append("',");
-            result.append("data : [ ");
+            ProcessResponse processResponse = new ProcessResponse();
+            processResponse.setProcess(cpu.getCpuName());
             switch (selectedAlgorithm) {
                 case "merge_all":
-                    result.append(getDataChartMergeAll(cpu));
+                    DataProcessResponse data = new DataProcessResponse();
+//                    data.setAlgorithm("merge_all");
+                    data.setTitle(createTitle());
+                    data.setData(getDataChartMergeAll(cpu));
+                    processResponse.setDatas(data);
                     break;
                 case "binary_merge":
-                    result.append(getDataChartBinaryMerge(cpu));
+                    DataProcessResponse data2 = new DataProcessResponse();
+//                    data2.setAlgorithm("binary_merge");
+                    data2.setTitle(createTitle());
+                    data2.setData(getDataChartBinaryMerge(cpu));
+                    processResponse.setDatas(data2);
                     break;
                 case "redistribution_binary_merge":
-                    result.append(getDataRedistributionBinaryMerge(cpu));
+                    DataProcessResponse data3 = new DataProcessResponse();
+//                    data3.setAlgorithm("redistribution_binary_merge");
+                    data3.setTitle(createTitle());
+                    data3.setData(getDataRedistributionBinaryMerge(cpu));
+                    processResponse.setDatas(data3);
                     break;
                 case "redistribution_merge_all":
-                    result.append(getDataRedistributionMergeAll(cpu));
+                    DataProcessResponse data4 = new DataProcessResponse();
+//                    data4.setAlgorithm("redistribution_merge_all");
+                    data4.setTitle(createTitle());
+                    data4.setData(getDataRedistributionMergeAll(cpu));
+                    processResponse.setDatas(data4);
                     break;
                 case "partitioned":
-                    result.append(getDataPartitionedSort(cpu));
+                    DataProcessResponse data5 = new DataProcessResponse();
+//                    data5.setAlgorithm("partitioned");
+                    data5.setTitle(createTitle());
+                    data5.setData(getDataPartitionedSort(cpu));
+                    processResponse.setDatas(data5);
                     break;
             }
-
-            result.append("] ");
-            result.append("},");
             c++;
+            result.add(processResponse);
         }
-        result.append("]");
+
+        response.setAlgorithm(selectedAlgorithm);
         response.setSuccessful(Boolean.TRUE);
-        response.setResponse(result.toString());
+        response.setCode("200");
+        response.setResponse(result);
 
         return response;
     }
-
 
     private void fillStorage() {
         for (int i = 0; i < noRandomGeneration; i++) {

@@ -5,10 +5,8 @@ import lombok.Data;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Response<T> {
-    private boolean successful;
+public class DataProcessResponse {
     private String algorithm;
-    private String code;
-    private String errorDescription;
-    private T response;
+    private String title;
+    private String data;
 }
