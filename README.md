@@ -45,6 +45,7 @@ CPU Cost = Select cost + Sorting cost + Merging cost + Generation result cost
        Sorting cost = |Ri| * ⌈ Log2( |Ri| ) ⌉ * ts
        Merging cost = |Ri| * ( Number of passes - 1) * tm
        Generation result cost = |Ri| * Number of passes * tw
+       
 Communication cost
       Communication cost = (Ri / P) * (mp + ml)
 ````
@@ -52,6 +53,7 @@ Communication cost
 ````
 Communication cost
       Communication cost = (R / P) * mp
+      
 I/O Cost:
       Save Cost = (R / P) * (Number of passes + 1) * IO
       Load Cost = (R / P) * Number of passes * IO
